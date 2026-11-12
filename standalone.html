@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>智慧110综合指挥调度模拟平台</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%230d2b52'/><text x='50' y='66' font-size='48' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>110</text></svg>">
+<style>
+:root{
+  --primary:#0d2b52;
+  --primary-2:#14467c;
+  --primary-3:#1d5aa8;
+  --bg:#eef2f7;
+  --card:#ffffff;
+  --line:#dde4ee;
+  --text:#1f2d3d;
+  --muted:#6b7a90;
+  --red:#c0392b;
+  --red-bg:#fdecea;
+  --orange:#d97706;
+  --orange-bg:#fef3e2;
+  --green:#1e8449;
+  --green-bg:#e8f6ee;
+  --blue-bg:#e8f0fb;
+  --radius:10px;
+  --shadow:0 2px 10px rgba(13,43,82,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif;
+  background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;
+}
+button{font-family:inherit;cursor:pointer;border:none;outline:none}
+input,select,textarea{font-family:inherit;font-size:16px;outline:none}
+a{color:var(--primary-3);text-decoration:none}
+.view{display:none;min-height:100vh}
+.view.active{display:block}
+.container{max-width:1100px;margin:0 auto;padding:20px}
+.topbar{
+  background:var(--primary);color:#fff;padding:0 24px;height:56px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:50;box-shadow:0 2px 6px rgba(0,0,0,.15);
+}
+.topbar .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px}
+.topbar .brand .shield{
+  width:30px;height:30px;border-radius:6px;background:#fff;color:var(--primary);
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;
+}
+.topbar .meta{font-size:13px;opacity:.85}
+.topbar .meta b{color:#ffd166}
+.btn{
+  padding:10px 20px;border-radius:8px;font-size:15px;font-weight:600;
+  background:var(--primary-3);color:#fff;transition:.15s;
+}
+.btn:hover{background:var(--primary-2)}
+.btn.ghost{background:transparent;color:var(--primary-3);border:1px solid var(--primary-3)}
+.btn.ghost:hover{background:var(--blue-bg)}
+.btn.danger{background:var(--red)}
+.btn.ok{background:var(--green)}
+.btn.sm{padding:6px 12px;font-size:13px;border-radius:6px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:22px;margin-bottom:16px;
+}
+.card h3{font-size:16px;color:var(--primary);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card h3::before{content:"";width:4px;height:16px;background:var(--primary-3);border-radius:2px}
+.tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600}
+.tag.red{background:var(--red-bg);color:var(--red)}
+.tag.orange{background:var(--orange-bg);color:var(--orange)}
+.tag.green{background:var(--green-bg);color:var(--green)}
+.tag.blue{background:var(--blue-bg);color:var(--primary-3)}
+.tag.gray{background:#eef1f6;color:var(--muted)}
+#view-home{background:linear-gradient(160deg,#0d2b52 0%,#14467c 55%,#1d5aa8 100%);color:#fff;display:none}
+#view-home.active{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.home-badge{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);padding:6px 16px;border-radius:20px;font-size:13px;letter-spacing:2px;margin-bottom:18px}
+#view-home h1{font-size:34px;font-weight:800;letter-spacing:4px;margin-bottom:8px;text-align:center}
+#view-home .sub{opacity:.8;margin-bottom:36px;font-size:15px;text-align:center}
+.home-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;width:100%;max-width:760px}
+.home-card{background:#fff;border-radius:14px;padding:32px 26px;color:var(--text);cursor:pointer;transition:.2s;box-shadow:0 8px 24px rgba(0,0,0,.18);border-top:5px solid var(--primary-3)}
+.home-card:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,0,0,.25)}
+.home-card.police{border-top-color:var(--red)}
+.home-card .icon{width:54px;height:54px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;margin-bottom:16px;color:#fff}
+.home-card.reporter .icon{background:var(--primary-3)}
+.home-card.police .icon{background:var(--red)}
+.home-card h2{font-size:20px;margin-bottom:8px;color:var(--primary)}
+.home-card p{font-size:13px;color:var(--muted);line-height:1.7}
+.home-foot{margin-top:30px;font-size:12px;opacity:.6}
+.login-wrap{max-width:440px;margin:60px auto;padding:0 16px}
+.login-card{background:#fff;border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.login-tabs{display:flex}
+.login-tabs button{flex:1;padding:16px;background:#eef2f7;color:var(--muted);font-size:15px;font-weight:600;border-bottom:3px solid transparent}
+.login-tabs button.on{background:#fff;color:var(--primary);border-bottom-color:var(--primary-3)}
+.login-body{padding:26px}
+.login-body h3{margin-bottom:18px;color:var(--primary);font-size:18px}
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.form-row input,.form-row select,.form-row textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fafbfd}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--primary-3);background:#fff}
+.form-row textarea{min-height:80px;resize:vertical}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tip{background:var(--blue-bg);border-left:3px solid var(--primary-3);padding:10px 12px;border-radius:4px;font-size:13px;color:var(--primary-2);margin:10px 0}
+.section-title{display:flex;align-items:center;gap:10px;margin:18px 0 12px;color:var(--primary);font-weight:700}
+.section-title .num{width:24px;height:24px;border-radius:50%;background:var(--primary-3);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
+.chip-group{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:8px 14px;border:1px solid var(--line);border-radius:18px;background:#fff;font-size:13px;cursor:pointer;transition:.12s;user-select:none}
+.chip.on{background:var(--primary-3);color:#fff;border-color:var(--primary-3)}
+.switch-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.switch{width:44px;height:24px;border-radius:12px;background:#cdd6e3;position:relative;cursor:pointer;transition:.15s}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}
+.switch.on{background:var(--green)}
+.switch.on::after{left:22px}
+.case-no-bar{background:linear-gradient(90deg,var(--primary),var(--primary-3));color:#fff;padding:14px 20px;border-radius:10px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.case-no-bar .no{font-size:20px;font-weight:800;letter-spacing:1px}
+.timeline{position:relative;padding-left:28px}
+.timeline::before{content:"";position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl-item{position:relative;padding-bottom:18px}
+.tl-item::before{content:"";position:absolute;left:-26px;top:4px;width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--line)}
+.tl-item.done::before{background:var(--green);border-color:var(--green)}
+.tl-item.now::before{background:var(--orange);border-color:var(--orange);box-shadow:0 0 0 4px rgba(217,119,6,.2)}
+.tl-item .t{font-size:12px;color:var(--muted)}
+.tl-item .e{font-weight:600;margin:2px 0}
+.tl-item .d{font-size:13px;color:var(--muted)}
+.mapbox{height:220px;border-radius:10px;background:linear-gradient(#e8eef7,#e8eef7) padding-box,repeating-linear-gradient(0deg,transparent 0 24px,#d5dfe9 24px 25px),repeating-linear-gradient(90deg,transparent 0 24px,#d5dfe9 24px 25px);position:relative;overflow:hidden;border:1px solid var(--line)}
+.mapbox .road{position:absolute;background:#fff;border:1px solid #d5dfe9}
+.cop-marker{position:absolute;width:14px;height:14px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--primary-3);border:2px solid #fff;box-shadow:0 0 0 4px rgba(29,90,168,.25);left:60%;top:45%;transition:all 1.5s ease}
+.cop-marker::after{content:"";width:6px;height:6px;background:#fff;border-radius:50%;position:absolute;left:3px;top:3px}
+.dest-marker{position:absolute;width:16px;height:16px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--red);border:2px solid #fff;left:78%;top:65%}
+.eta{position:absolute;left:8px;bottom:8px;background:#fff;padding:6px 10px;border-radius:6px;font-size:12px;box-shadow:var(--shadow)}
+.ops-layout{display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:start}
+.case-list-item{padding:12px 14px;border:1px solid var(--line);border-radius:8px;margin-bottom:10px;cursor:pointer;transition:.12s;background:#fff}
+.case-list-item:hover{border-color:var(--primary-3)}
+.case-list-item.sel{border-color:var(--primary-3);background:#f0f6ff;box-shadow:inset 3px 0 0 var(--primary-3)}
+.case-list-item .row1{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.case-list-item .row2{font-weight:700;margin:4px 0;font-size:14px}
+.case-list-item .row3{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:8px 12px;font-size:14px}
+.kv dt{color:var(--muted)}
+.kv dd{word-break:break-all}
+.triage-panel{background:linear-gradient(135deg,#f0f6ff,#fff);border:1px solid #c9dcf5;border-radius:10px;padding:16px;margin:12px 0}
+.triage-panel .ai-head{display:flex;align-items:center;gap:8px;color:var(--primary-3);font-weight:700;margin-bottom:10px}
+.unit-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;background:var(--blue-bg);color:var(--primary-2);font-size:13px;margin:3px}
+.unit-chip.ambulance{background:var(--red-bg);color:var(--red)}
+.unit-chip.fire{background:#fff3e0;color:#d35400}
+.unit-chip.traffic{background:#fff8e1;color:#b7950b}
+.action-bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty .big{font-size:40px;margin-bottom:8px;opacity:.4}
+.archive-doc{background:#fffdf5;border:1px solid #e8dcb8;padding:28px;border-radius:6px;font-family:"SimSun","Songti SC",serif;line-height:1.9}
+.archive-doc h2{text-align:center;font-family:"SimHei",sans-serif;letter-spacing:4px;margin-bottom:6px}
+.archive-doc .sub{text-align:center;color:#666;font-size:13px;margin-bottom:18px;font-family:"Microsoft YaHei",sans-serif}
+.archive-doc p{text-indent:2em;margin-bottom:6px;font-size:15px}
+.archive-doc .sign{text-align:right;margin-top:24px;font-family:"Microsoft YaHei",sans-serif;font-size:14px}
+.review-box{background:#f4f9f4;border-left:4px solid var(--green);padding:14px;border-radius:4px;margin-top:14px}
+.review-box h4{color:var(--green);margin-bottom:6px}
+#toast{position:fixed;left:50%;top:24px;transform:translateX(-50%);background:rgba(13,43,82,.95);color:#fff;padding:10px 22px;border-radius:8px;font-size:14px;z-index:9999;opacity:0;transition:.25s;pointer-events:none}
+#toast.show{opacity:1;top:40px}
+@media (max-width:820px){
+  .home-grid{grid-template-columns:1fr}
+  .ops-layout{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+  .kv{grid-template-columns:90px 1fr}
+  #view-home h1{font-size:24px}
+}
+</style>
+</head>
+<body>
+<section id="view-home" class="view active">
+  <div class="home-badge">智 慧 1 1 0 · 综 合 指 挥 调 度 模 拟 平 台</div>
+  <h1>智慧110平台</h1>
+  <div class="sub">AI 辅助接警 · 智能研判 · 多警种协同 · 闭环处置</div>
+  <div class="home-grid">
+    <div class="home-card reporter" onclick="go('report')">
+      <div class="icon">报</div>
+      <h2>我要报警</h2>
+      <p>无需登录，直接填写警情关键信息，实时查看警员位置与处置进度，接收AI安全指引。</p>
+    </div>
+    <div class="home-card police" onclick="go('login?role=officer')">
+      <div class="icon">警</div>
+      <h2>警员 / 后台入口</h2>
+      <p>接警工作台：AI 案情研判、警力调度、多警种协同联络、结案卷宗与复盘。</p>
+    </div>
+  </div>
+  <div class="home-foot">本系统为教学演示环境 · 数据仅保存在本地浏览器 · 真实警情请拨打 110</div>
+</section>
+
+<section id="view-login" class="view">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-tabs">
+        <button id="tab-officer" onclick="setLoginTab('officer')">警员入口</button>
+        <button id="tab-admin" onclick="setLoginTab('admin')">后台入口</button>
+      </div>
+      <div class="login-body">
+        <h3 id="login-title">警员登录</h3>
+        <div id="login-officer">
+          <div class="form-row"><label>警号</label><input id="login-pid" placeholder="如 3301001" value="3301001"></div>
+          <div class="form-row"><label>姓名</label><input id="login-pname" placeholder="请输入姓名" value="张警官"></div>
+          <div class="form-row"><label>所属单位</label>
+            <select id="login-unit">
+              <option>辖区派出所·巡警中队</option>
+              <option>刑事侦查大队</option>
+              <option>交通警察大队</option>
+              <option>特警突击中队</option>
+              <option>社区警务队</option>
+            </select>
+          </div>
+          <button class="btn" style="width:100%" onclick="doLogin('officer')">进入接警工作台</button>
+        </div>
+        <div id="login-admin" style="display:none">
+          <div class="form-row"><label>管理员口令</label><input id="login-apwd" type="password" placeholder="演示口令 admin"></div>
+          <div class="tip">后台用于查看全部警情、已结案件卷宗与出警复盘总结。</div>
+          <button class="btn" style="width:100%" onclick="doLogin('admin')">进入后台管理</button>
+        </div>
+        <div style="text-align:center;margin-top:14px"><a href="#/home">← 返回首页</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="view-report" class="view">
+  <div class="topbar">
+    <div class="brand"><div class="shield">110</div>智慧110 · 报警人端</div>
+    <div class="meta">教学演示 · <a href="#/home" style="color:#ffd166">退出</a></div>
+  </div>
+  <div class="container">
+    <div class="card">
+      <h3>警情关键信息采集</h3>
+      <div class="section-title"><div class="num">1</div>您的联系方式</div>
+      <div class="form-grid">
+        <div class="form-row"><label>报警人姓名</label><input id="r-name" placeholder="怎么称呼您"></div>
+        <div class="form-row"><label>联系电话</label><input id="r-phone" placeholder="11位手机号" maxlength="11"></div>
+      </div>
+      <div class="section-title"><div class="num">2</div>案发地点</div>
+      <div class="form-row"><label>详细地址 / 位置描述</label><input id="r-loc" placeholder="如：XX路XX小区3栋2单元楼下"></div>
+      <div class="section-title"><div class="num">3</div>事件类型（单选）</div>
+      <div class="chip-group" id="r-type"></div>
+      <div class="section-title"><div class="num">4</div>情况描述</div>
+      <div class="form-row"><label>简要说明发生了什么</label><textarea id="r-desc" placeholder="尽量客观描述：谁、在干什么、有没有人受伤、有没有工具……"></textarea></div>
+      <div class="form-grid">
+        <div class="form-row"><label>涉及人数</label>
+          <select id="r-people">
+            <option value="1">1人</option><option value="2">2人</option>
+            <option value="3-5">3-5人</option><option value="5+">5人以上</option>
+          </select>
+        </div>
+        <div class="form-row"><label>事件是否正在进行</label>
+          <select id="r-ongoing">
+            <option value="1">正在发生，现场紧迫</option>
+            <option value="0">刚发生不久</option>
+            <option value="2">已结束，需要事后处理</option>
+          </select>
+        </div>
+      </div>
+      <div class="section-title"><div class="num">5</div>人员与工具情况</div>
+      <div class="switch-row" style="margin-bottom:10px">
+        <div class="switch" id="sw-injury" onclick="toggleSwitch('sw-injury')"></div>
+        <span>现场有人员受伤</span>
+      </div>
+      <div class="form-row" id="injury-desc-row" style="display:none"><label>伤情简述</label><input id="r-injury" placeholder="如：手臂被划伤，已止血"></div>
+      <div class="switch-row" style="margin-bottom:10px">
+        <div class="switch" id="sw-weapon" onclick="toggleSwitch('sw-weapon')"></div>
+        <span>现场有人持械 / 危险物品</span>
+      </div>
+      <div class="section-title"><div class="num">6</div>是否需要联动支援</div>
+      <div class="switch-row" style="margin-bottom:10px">
+        <div class="switch" id="sw-120" onclick="toggleSwitch('sw-120')"></div>
+        <span>需要 120 急救到场</span>
+      </div>
+      <div class="switch-row" style="margin-bottom:10px">
+        <div class="switch" id="sw-119" onclick="toggleSwitch('sw-119')"></div>
+        <span>需要 119 消防到场（火情/被困）</span>
+      </div>
+      <div class="switch-row">
+        <div class="switch" id="sw-122" onclick="toggleSwitch('sw-122')"></div>
+        <span>需要 122 交警到场（交通事故）</span>
+      </div>
+      <div class="tip">提交后系统将自动生成案件编号，请妥善保存；警员将尽快与您电话联系。</div>
+      <button class="btn" style="width:100%;padding:14px;font-size:16px" onclick="submitReport()">提交报警，生成案件编号</button>
+    </div>
+  </div>
+</section>
+
+<section id="view-track" class="view">
+  <div class="topbar">
+    <div class="brand"><div class="shield">110</div>智慧110 · 警情通报</div>
+    <div class="meta"><a href="#/home" style="color:#ffd166">返回首页</a></div>
+  </div>
+  <div class="container" id="track-body"></div>
+</section>
+
+<section id="view-officer" class="view">
+  <div class="topbar">
+    <div class="brand"><div class="shield">110</div>指挥调度台 · <span id="officer-name" style="font-size:14px;font-weight:400"></span></div>
+    <div class="meta">今日接警 <b id="today-count">0</b> 起 · 处置中 <b id="busy-count">0</b> 起</div>
+  </div>
+  <div class="container">
+    <div class="ops-layout">
+      <div>
+        <div class="card" style="padding:14px">
+          <h3 style="margin-bottom:10px">待 / 在处警队列</h3>
+          <div id="case-queue"></div>
+        </div>
+        <button class="btn ghost sm" onclick="addDemoCase()">+ 模拟一起新警情</button>
+      </div>
+      <div id="case-detail"></div>
+    </div>
+  </div>
+</section>
+
+<section id="view-archive" class="view">
+  <div class="topbar">
+    <div class="brand"><div class="shield">110</div>后台 · 案件卷宗与复盘</div>
+    <div class="meta"><a href="#/home" style="color:#ffd166">退出</a></div>
+  </div>
+  <div class="container">
+    <div class="card">
+      <h3>全部警情列表</h3>
+      <div id="archive-list"></div>
+    </div>
+    <div id="archive-doc-wrap"></div>
+  </div>
+</section>
+
+<div id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+function toast(msg){
+  const t=$('#toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2200);
+}
+function now(){ const d=new Date();
+  const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+function todayStr(){ return now().slice(0,10); }
+const LS_KEY='smart110_cases_v1';
+function loadCases(){ try{ return JSON.parse(localStorage.getItem(LS_KEY))||[] }catch(e){ return [] } }
+function saveCases(arr){ localStorage.setItem(LS_KEY, JSON.stringify(arr)); }
+let CASES = loadCases();
+function persist(){ saveCases(CASES); }
+function newCaseId(){
+  const d=todayStr().replace(/-/g,'');
+  const n = String(CASES.length+1).padStart(4,'0');
+  return `AJ${d}-${n}`;
+}
+const TYPE_DICT = {
+  '盗窃':{cat:'criminal',sev:3,urg:2,unit:'刑事侦查大队'},
+  '抢劫抢夺':{cat:'criminal',sev:5,urg:5,unit:'特警突击中队'},
+  '斗殴伤人':{cat:'criminal',sev:4,urg:4,unit:'辖区派出所·巡警中队'},
+  '故意伤害':{cat:'criminal',sev:5,urg:5,unit:'辖区派出所·巡警中队'},
+  '诈骗':{cat:'criminal',sev:3,urg:1,unit:'刑事侦查大队'},
+  '涉毒':{cat:'criminal',sev:5,urg:4,unit:'刑事侦查大队'},
+  '涉黄':{cat:'criminal',sev:3,urg:2,unit:'辖区派出所·巡警中队'},
+  '肇事逃逸':{cat:'criminal',sev:4,urg:4,unit:'交通警察大队'},
+  '邻里纠纷':{cat:'civil',sev:1,urg:1,unit:'社区警务队'},
+  '噪音扰民':{cat:'civil',sev:1,urg:1,unit:'社区警务队'},
+  '消费纠纷':{cat:'civil',sev:2,urg:1,unit:'辖区派出所·巡警中队'},
+  '家庭矛盾':{cat:'civil',sev:2,urg:2,unit:'社区警务队'},
+  '宠物扰民':{cat:'civil',sev:1,urg:1,unit:'社区警务队'},
+  '劳资纠纷':{cat:'civil',sev:2,urg:2,unit:'辖区派出所·巡警中队'},
+  '交通事故':{cat:'traffic',sev:3,urg:3,unit:'交通警察大队'},
+  '人员走失':{cat:'other',sev:2,urg:2,unit:'辖区派出所·巡警中队'},
+  '高空坠物':{cat:'other',sev:4,urg:4,unit:'辖区派出所·巡警中队'},
+  '火灾隐患':{cat:'other',sev:4,urg:4,unit:'辖区派出所·巡警中队'}
+};
+const TYPE_LABELS = Object.keys(TYPE_DICT);
+function aiTriage(reporter){
+  const t = TYPE_DICT[reporter.conflictType] || {cat:'other',sev:2,urg:2,unit:'辖区派出所·巡警中队'};
+  let sev = t.sev, urg = t.urg;
+  const flags = [];
+  if(reporter.hasInjury){ sev = Math.max(sev,4); urg = Math.max(urg,4); flags.push('现场有人员受伤'); }
+  if(reporter.weapon){ sev = 5; urg = 5; flags.push('现场有人持械/危险物品'); }
+  if(reporter.ongoing === '1'){ urg = Math.max(urg,4); flags.push('事件正在进行中'); }
+  if(reporter.peopleCount === '5+'){ sev = Math.max(sev,4); flags.push('5人以上聚集'); }
+  const need120 = reporter.need120 || reporter.hasInjury;
+  const need119 = reporter.need119;
+  const need122 = reporter.need122 || reporter.conflictType==='交通事故' || reporter.conflictType==='肇事逃逸';
+  let severity, sevColor;
+  if(sev>=5){ severity='特别重大'; sevColor='red'; }
+  else if(sev>=4){ severity='重大'; sevColor='red'; }
+  else if(sev>=3){ severity='较大'; sevColor='orange'; }
+  else { severity='一般'; sevColor='green'; }
+  let urgency, urgColor;
+  if(urg>=5){ urgency='特别紧急'; urgColor='red'; }
+  else if(urg>=4){ urgency='紧急'; urgColor='red'; }
+  else if(urg>=3){ urgency='较急'; urgColor='orange'; }
+  else { urgency='一般'; urgColor='green'; }
+  const catMap = {criminal:'刑事案件', civil:'治安/民情案件', traffic:'交通类警情', other:'其他求助类'};
+  const category = catMap[t.cat];
+  const units = [t.unit];
+  if(sev>=4 && t.unit!=='特警突击中队') units.push('特警突击中队（备勤）');
+  if(reporter.peopleCount==='5+') units.push('就近巡逻车组增援');
+  const links = [];
+  if(need120) links.push({name:'120急救中心', cls:'ambulance'});
+  if(need119) links.push({name:'119消防救援', cls:'fire'});
+  if(need122) links.push({name:'122交警联动', cls:'traffic'});
+  const adviceToReporter = buildReporterAdvice(reporter, t, need120);
+  const adviceToOfficer = buildOfficerAdvice(reporter, t, {sev,urg,need120,need119,need122,units});
+  return {category, severity, sevColor, urgency, urgColor, units, links, flags, need120, need119, need122, adviceToReporter, adviceToOfficer, triageTime: now()};
+}
+function buildReporterAdvice(r, t, need120){
+  const a = [];
+  a.push('请保持电话畅通，接警员将在 1 分钟内与您电话核实。');
+  if(r.weapon){ a.push('现场有人持械，请立即撤离到安全区域，不要正面冲突，远离门窗。'); }
+  else if(r.hasInjury){ a.push('请在安全前提下对伤者进行简单止血，不要随意搬动重伤员。'); }
+  else if(t.cat==='civil'){ a.push('请保持克制，不要与对方发生肢体冲突，等待民警到场处理。'); }
+  else if(t.cat==='criminal' && r.ongoing==='1'){ a.push('请优先确保自身安全，记住嫌疑人特征和逃跑方向，不要追赶。'); }
+  if(need120) a.push('已同步呼叫 120，急救人员将与警车联动到场。');
+  a.push('不要删除本页面，可随时查看警员位置与处置进度。');
+  return a;
+}
+function buildOfficerAdvice(r, t, o){
+  const a = [];
+  a.push(`【定级】${o.severity} / ${o.urgency}，按${o.units[0]}主处警。`);
+  if(r.weapon) a.push('【风险】现场持械，着防弹衣、携带警械，两车组以上协同接近，先喊话控制。');
+  if(r.hasInjury) a.push('【医疗】已联动120，到场后优先救护伤员并保护现场。');
+  if(r.peopleCount==='5+') a.push('【群体】人数较多，立即上报指挥中心增派巡逻车组，开启执法记录仪全程录像。');
+  if(t.cat==='criminal'){ a.push('【取证】控制嫌疑人后立即盘问检查，调取周边监控，登记证人信息。'); }
+  else if(t.cat==='civil'){ a.push('【调解】以劝导化解为主，分别听取双方陈述，做好调解笔录，防止矛盾升级。'); }
+  else if(t.cat==='traffic'){ a.push('【交通】先划定警戒区、疏导交通，有人伤的先救人再定责。'); }
+  a.push('【联络】已建立临时作战群，成员：' + o.units.join('、') + (o.need120?'、120现场医护':'') + '。');
+  return a;
+}
+function go(hash){ location.hash = '#/' + hash; }
+function parseHash(){
+  const h = location.hash.replace(/^#\//,'');
+  const [path, qs] = h.split('?');
+  const q = {};
+  if(qs) qs.split('&').forEach(kv=>{ const [k,v]=kv.split('='); q[k]=decodeURIComponent(v||''); });
+  return {path: path||'home', q};
+}
+function router(){
+  const {path, q} = parseHash();
+  $$('.view').forEach(v=>v.classList.remove('active'));
+  const map = {home:'view-home', login:'view-login', report:'view-report', track:'view-track', officer:'view-officer', archive:'view-archive'};
+  const el = document.getElementById(map[path]||'view-home');
+  if(el) el.classList.add('active');
+  if(path==='login') setLoginTab(q.role==='officer'?'officer':(q.role==='admin'?'admin':'officer'));
+  if(path==='report') renderTypeChips();
+  if(path==='track') renderTrack(q);
+  if(path==='officer') renderOfficer();
+  if(path==='archive') renderArchive();
+  window.scrollTo(0,0);
+}
+window.addEventListener('hashchange', router);
+let SESSION = {role:null, name:null, unit:null};
+function setLoginTab(t){
+  $('#tab-officer').classList.toggle('on', t==='officer');
+  $('#tab-admin').classList.toggle('on', t==='admin');
+  $('#login-officer').style.display = t==='officer'?'block':'none';
+  $('#login-admin').style.display = t==='admin'?'block':'none';
+  $('#login-title').textContent = t==='officer'?'警员登录':'后台管理员登录';
+}
+function doLogin(role){
+  if(role==='officer'){
+    const pid=$('#login-pid').value.trim();
+    const name=$('#login-pname').value.trim();
+    if(!pid||!name){ toast('请填写警号和姓名'); return; }
+    SESSION={role:'officer', name, pid, unit:$('#login-unit').value};
+    $('#officer-name').textContent = `${name} · ${$('#login-unit').value}`;
+    go('officer');
+  } else {
+    if($('#login-apwd').value !== 'admin'){ toast('口令错误（演示口令 admin）'); return; }
+    SESSION={role:'admin', name:'管理员'};
+    go('archive');
+  }
+}
+function toggleSwitch(id){ $('#'+id).classList.toggle('on');
+  if(id==='sw-injury') $('#injury-desc-row').style.display = $('#'+id).classList.contains('on')?'block':'none';
+}
+let selectedType = null;
+function renderTypeChips(){
+  const box = $('#r-type');
+  if(box.dataset.done) return;
+  box.innerHTML = TYPE_LABELS.map(t=>`<div class="chip" data-t="${t}" onclick="pickType(this)">${t}</div>`).join('');
+  box.dataset.done='1';
+}
+function pickType(el){
+  $$('#r-type .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on'); selectedType = el.dataset.t;
+}
+function submitReport(){
+  const name=$('#r-name').value.trim(), phone=$('#r-phone').value.trim(), loc=$('#r-loc').value.trim();
+  if(!name){ toast('请填写报警人称呼'); return; }
+  if(!/^1\d{10}$/.test(phone)){ toast('请填写11位手机号'); return; }
+  if(!loc){ toast('请填写案发地点'); return; }
+  if(!selectedType){ toast('请选择事件类型'); return; }
+  const reporter = {
+    name, phone, location:loc,
+    conflictType: selectedType,
+    desc: $('#r-desc').value.trim()||'（报警人未补充描述）',
+    peopleCount: $('#r-people').value,
+    ongoing: $('#r-ongoing').value,
+    hasInjury: $('#sw-injury').classList.contains('on'),
+    injuryDesc: $('#r-injury').value.trim(),
+    weapon: $('#sw-weapon').classList.contains('on'),
+    need120: $('#sw-120').classList.contains('on'),
+    need119: $('#sw-119').classList.contains('on'),
+    need122: $('#sw-122').classList.contains('on')
+  };
+  const c = {
+    id: newCaseId(), reporter, status: 'reported', triage: null,
+    assignedUnit: null, assignedOfficer: null,
+    timeline: [{time:now(), event:'110接警台受理警情', detail:`报警人${name}，电话${phone.slice(0,3)}****${phone.slice(-4)}`}],
+    createdAt: now(), closedAt: null, archive: null
+  };
+  CASES.unshift(c); persist();
+  c.triage = aiTriage(reporter);
+  c.timeline.push({time:now(), event:'AI 完成初步研判', detail:`${c.triage.category} · ${c.triage.severity} · ${c.triage.urgency}`});
+  persist();
+  sessionStorage.setItem('lastCaseId', c.id);
+  sessionStorage.setItem('lastCasePhone', phone.slice(-4));
+  toast('报警提交成功，案件编号 '+c.id);
+  setTimeout(()=>go('track?id='+c.id+'&p='+phone.slice(-4)), 600);
+}
+const STATUS_LABEL = {
+  reported:'已受理', dispatched:'已派警', enroute:'出警途中',
+  onscene:'已到达现场', handling:'现场处置中', closed:'已结案'
+};
+function findCase(id){ return CASES.find(c=>c.id===id); }
+function renderTrack(q){
+  const body = $('#track-body');
+  let cid = q.id, p4 = q.p;
+  if(!cid){
+    const lastId = sessionStorage.getItem('lastCaseId');
+    const lastP  = sessionStorage.getItem('lastCasePhone');
+    body.innerHTML = `
+      <div class="card" style="max-width:520px;margin:40px auto">
+        <h3>查询我的警情</h3>
+        <div class="form-row"><label>案件编号</label><input id="q-id" placeholder="如 AJ20261112-0001" value="${lastId||''}"></div>
+        <div class="form-row"><label>报警手机号后4位</label><input id="q-p" maxlength="4" placeholder="后4位" value="${lastP||''}"></div>
+        <button class="btn" style="width:100%" onclick="doQueryTrack()">查询进度</button>
+      </div>`;
+    return;
+  }
+  const c = findCase(cid);
+  if(!c){ body.innerHTML = `<div class="card"><div class="empty"><div class="big">!</div>未找到案件 ${cid}</div></div>`; return; }
+  if(p4 && c.reporter.phone.slice(-4)!==p4){
+    body.innerHTML = `<div class="card"><div class="empty"><div class="big">!</div>手机号后4位校验失败</div></div>`; return;
+  }
+  renderTrackBody(c);
+}
+function doQueryTrack(){
+  const id=$('#q-id').value.trim(), p=$('#q-p').value.trim();
+  if(!id||!p){ toast('请完整输入案件号和手机后4位'); return; }
+  go('track?id='+encodeURIComponent(id)+'&p='+p);
+}
+function renderTrackBody(c){
+  const t = c.triage;
+  const etaMin = c.status==='reported' ? '--' :
+                 c.status==='dispatched' ? '约 8 分钟' :
+                 c.status==='enroute' ? '约 4 分钟' :
+                 c.status==='onscene'||c.status==='handling' ? '警员已在现场' : '已结束';
+  const posMap = {reported:[20,70],dispatched:[35,60],enroute:[55,48],onscene:[78,65],handling:[78,65],closed:[78,65]};
+  const [cx,cy] = posMap[c.status]||[20,70];
+  $('#track-body').innerHTML = `
+    <div class="case-no-bar">
+      <div>
+        <div style="font-size:12px;opacity:.85">案件编号</div>
+        <div class="no">${c.id}</div>
+      </div>
+      <div>
+        <span class="tag ${t? t.urgColor==='red'?'red':t.urgColor==='orange'?'orange':'green':'gray'}">${STATUS_LABEL[c.status]}</span>
+        ${t?`<div style="margin-top:6px;font-size:13px">${t.category} · ${t.severity}</div>`:''}
+      </div>
+    </div>
+    <div class="card">
+      <h3>警员位置与预计到达</h3>
+      <div class="mapbox">
+        <div class="road" style="left:0;right:0;top:30%;height:14px"></div>
+        <div class="road" style="top:0;bottom:0;left:40%;width:14px"></div>
+        <div class="cop-marker" style="left:${cx}%;top:${cy}%"></div>
+        <div class="dest-marker"></div>
+        <div class="eta">巡逻车组 · <b>${etaMin}</b></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>处置进度</h3>
+      <div class="timeline">
+        ${c.timeline.map((it,i)=>{
+          const cls = i < c.timeline.length-1 ? 'done' : (c.status==='closed'?'done':'now');
+          return `<div class="tl-item ${cls}">
+            <div class="t">${it.time}</div>
+            <div class="e">${it.event}</div>
+            <div class="d">${it.detail||''}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    ${t?`<div class="card">
+      <h3>AI 安全指引（给您）</h3>
+      <ul style="padding-left:20px;line-height:2">${t.adviceToReporter.map(a=>`<li>${a}</li>`).join('')}</ul>
+    </div>`:''}
+    ${c.status==='closed'?`<div class="card" style="border-left:4px solid var(--green)">
+      <h3 style="color:var(--green)">本起警情已办结</h3>
+      <p style="font-size:14px;color:var(--muted)">${c.archive?c.archive.summary:''}</p>
+      <p style="margin-top:10px"><button class="btn ghost sm" onclick="go('home')">返回首页</button></p>
+    </div>`:''}
+  `;
+}
+let selectedCaseId = null;
+function renderOfficer(){
+  $('#today-count').textContent = CASES.filter(c=>c.createdAt.startsWith(todayStr())).length;
+  $('#busy-count').textContent = CASES.filter(c=>['dispatched','enroute','onscene','handling'].includes(c.status)).length;
+  renderQueue(); renderDetail();
+}
+function renderQueue(){
+  const box = $('#case-queue');
+  if(CASES.length===0){
+    box.innerHTML = `<div class="empty"><div class="big">·</div>暂无待处警情<br><button class="btn sm" style="margin-top:10px" onclick="addDemoCase()">模拟一起警情</button></div>`;
+    return;
+  }
+  box.innerHTML = CASES.map(c=>{
+    const t=c.triage;
+    const cls = c.id===selectedCaseId?'sel':'';
+    return `<div class="case-list-item ${cls}" onclick="selectCase('${c.id}')">
+      <div class="row1">
+        <span>${c.id}</span>
+        <span class="tag ${c.status==='closed'?'gray':(t&&t.urgColor==='red'?'red':t&&t.urgColor==='orange'?'orange':'green')}">${STATUS_LABEL[c.status]}</span>
+      </div>
+      <div class="row2">${c.reporter.conflictType} · ${c.reporter.location}</div>
+      <div class="row3">报警人：${c.reporter.name} · ${c.reporter.peopleCount}人</div>
+    </div>`;
+  }).join('');
+}
+function selectCase(id){ selectedCaseId=id; renderQueue(); renderDetail(); }
+function renderDetail(){
+  const box = $('#case-detail');
+  const c = findCase(selectedCaseId) || CASES[0];
+  if(!c){ box.innerHTML=`<div class="card"><div class="empty">从左侧选择一起警情开始处置</div></div>`; return; }
+  selectedCaseId = c.id;
+  const r=c.reporter, t=c.triage;
+  let triageHtml = '';
+  if(!t){
+    triageHtml = `<div class="tip">该警情尚未 AI 研判，点击下方按钮开始研判派警。</div>`;
+  } else {
+    const flags = t.flags.length?`<div style="margin:8px 0">${t.flags.map(f=>`<span class="tag red" style="margin-right:6px">${f}</span>`).join('')}</div>`:'';
+    const units = t.units.map(u=>`<span class="unit-chip">${u}</span>`).join('');
+    const links = t.links.map(l=>`<span class="unit-chip ${l.cls}">${l.name}</span>`).join('') || '<span class="tag gray">无联动</span>';
+    triageHtml = `
+      <div class="triage-panel">
+        <div class="ai-head">◆ AI 智能研判结果</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <span class="tag blue">${t.category}</span>
+          <span class="tag ${t.sevColor}">严重度：${t.severity}</span>
+          <span class="tag ${t.urgColor}">紧急度：${t.urgency}</span>
+        </div>
+        ${flags}
+        <div style="font-size:13px;color:var(--muted);margin:6px 0 2px">建议处警单位：</div>
+        <div>${units}</div>
+        <div style="font-size:13px;color:var(--muted);margin:8px 0 2px">联动支援：</div>
+        <div>${links}</div>
+        <div style="font-size:13px;color:var(--muted);margin:10px 0 2px">处警要点：</div>
+        <ul style="padding-left:20px;font-size:13px;line-height:1.9">${t.adviceToOfficer.map(a=>`<li>${a}</li>`).join('')}</ul>
+      </div>`;
+  }
+  let actionBar = '';
+  if(c.status==='reported' && !t){
+    actionBar = `<div class="action-bar"><button class="btn" onclick="doTriage()">一键 AI 研判并派警</button></div>`;
+  } else if(c.status==='dispatched'){
+    actionBar = `<div class="action-bar">
+      <button class="btn" onclick="advance('enroute')">出动出发</button>
+      <button class="btn ghost" onclick="advance('cancel')">撤销警情</button>
+    </div>`;
+  } else if(c.status==='enroute'){
+    actionBar = `<div class="action-bar"><button class="btn" onclick="advance('onscene')">到达现场</button></div>`;
+  } else if(c.status==='onscene'){
+    actionBar = `<div class="action-bar"><button class="btn" onclick="advance('handling')">开始现场处置</button></div>`;
+  } else if(c.status==='handling'){
+    actionBar = `<div class="action-bar"><button class="btn ok" onclick="openClose()">处置完毕，结案生成卷宗</button></div>`;
+  } else if(c.status==='closed'){
+    actionBar = `<div class="action-bar"><button class="btn ghost" onclick="go('archive')">查看卷宗</button></div>`;
+  }
+  box.innerHTML = `
+    <div class="card">
+      <h3>警情详情 <span style="font-weight:400;font-size:12px;color:var(--muted);margin-left:8px">${c.id} · ${c.createdAt}</span></h3>
+      <dl class="kv">
+        <dt>报警人</dt><dd>${r.name}（${r.phone.slice(0,3)}****${r.phone.slice(-4)}）</dd>
+        <dt>案发地点</dt><dd>${r.location}</dd>
+        <dt>事件类型</dt><dd><span class="tag blue">${r.conflictType}</span></dd>
+        <dt>情况描述</dt><dd style="white-space:pre-wrap">${r.desc}</dd>
+        <dt>涉及人数</dt><dd>${r.peopleCount}${r.weapon?' · <span class="tag red">持械</span>':''}${r.hasInjury?' · <span class="tag red">有伤情</span>':''}</dd>
+        <dt>事件状态</dt><dd>${r.ongoing==='1'?'正在进行':r.ongoing==='0'?'刚发生':'已结束'}</dd>
+        ${r.injuryDesc?`<dt>伤情</dt><dd>${r.injuryDesc}</dd>`:''}
+      </dl>
+      ${triageHtml}
+      ${actionBar}
+    </div>
+    <div class="card">
+      <h3>处置时间线</h3>
+      <div class="timeline">
+        ${c.timeline.map(it=>`<div class="tl-item done"><div class="t">${it.time}</div><div class="e">${it.event}</div><div class="d">${it.detail||''}</div></div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+function doTriage(){
+  const c = findCase(selectedCaseId); if(!c) return;
+  c.triage = aiTriage(c.reporter);
+  c.assignedUnit = c.triage.units[0];
+  c.assignedOfficer = SESSION.name||'值班民警';
+  c.status = 'dispatched';
+  c.timeline.push({time:now(), event:'指挥中心派警', detail:`指令下达：${c.triage.units.join('、')}；主责：${c.assignedUnit}`});
+  if(c.triage.need120) c.timeline.push({time:now(), event:'联动 120', detail:'急救中心已接单，同步前往现场'});
+  if(c.triage.need119) c.timeline.push({time:now(), event:'联动 119', detail:'消防救援站已出动'});
+  if(c.triage.need122) c.timeline.push({time:now(), event:'联动 122', detail:'交警已调度就近警力'});
+  c.timeline.push({time:now(), event:'建立临时联络群', detail:`成员：${c.assignedOfficer}、${c.triage.units.join('、')}、指挥中心`});
+  persist(); toast('AI 研判完成，已派警'); renderOfficer();
+}
+function advance(step){
+  const c = findCase(selectedCaseId); if(!c) return;
+  const map = {
+    enroute:['enroute','民警出动','巡逻车组已从所内出发，预计 8 分钟到达'],
+    onscene:['onscene','到达现场','警力已抵达，开始现场管控与询问'],
+    handling:['handling','现场处置','开展处置、取证、调解 / 控制嫌疑人']
+  };
+  if(step==='cancel'){
+    c.status='closed'; c.closedAt=now();
+    c.archive={summary:'报警人自行撤回警情，未造成实际后果。', result:'作撤案处理。', legal:'—', review:'接警后应加强回访确认。', lessons:'在派警前再次与报警人电话核实，避免无效出动。'};
+    c.timeline.push({time:now(),event:'警情撤销',detail:'报警人撤回'});
+    persist(); renderOfficer(); return;
+  }
+  const [st,ev,dt]=map[step];
+  c.status=st;
+  c.timeline.push({time:now(),event:ev,detail:dt});
+  persist(); toast(ev); renderOfficer();
+}
+function addDemoCase(){
+  const demos=[
+    {name:'李先生',phone:'13800138888',location:'文三路 288 号小区门口',conflictType:'邻里纠纷',peopleCount:'2',ongoing:'2',hasInjury:false,weapon:false,need120:false,need119:false,need122:false,desc:'楼上住户夜间装修噪音持续一周，多次沟通无果，今天又开始电钻。'},
+    {name:'王女士',phone:'13912345678',location:'教工路 99 号便利店',conflictType:'盗窃',peopleCount:'1',ongoing:'2',hasInjury:false,weapon:false,need120:false,need119:false,need122:false,desc:'刚发现收银台抽屉被撬，少了约 2000 元现金，门口监控应该拍到了人。'},
+    {name:'赵师傅',phone:'13755556666',location:'莫干山路与文一路交叉口',conflictType:'交通事故',peopleCount:'2',ongoing:'1',hasInjury:true,injuryDesc:'电动车骑手腿部擦伤',weapon:false,need120:true,need119:false,need122:true,desc:'小汽车转弯和直行电动车相撞，电动车倒在路中间，有人腿破了。'},
+    {name:'陈同学',phone:'13677778888',location:'申花路某网吧楼下',conflictType:'斗殴伤人',peopleCount:'5+',ongoing:'1',hasInjury:true,weapon:true,need120:true,need119:false,need122:false,desc:'两伙人在吵架，有人拿了啤酒瓶，已经有人头破了。'}
+  ];
+  const r = demos[Math.floor(Math.random()*demos.length)];
+  const c={id:newCaseId(),reporter:r,status:'reported',triage:null,assignedUnit:null,assignedOfficer:null,
+    timeline:[{time:now(),event:'110接警台受理警情',detail:`报警人${r.name}`}],createdAt:now(),closedAt:null,archive:null};
+  CASES.unshift(c); persist();
+  selectedCaseId=c.id; toast('已模拟一起新警情'); renderOfficer();
+}
+function openClose(){
+  const c = findCase(selectedCaseId); if(!c) return;
+  const result = prompt('请输入本次处置结果（一句话）：',
+    c.triage && c.triage.category.includes('刑事') ? '嫌疑人已控制，带回派出所进一步审查。' :
+    c.triage && c.triage.category.includes('交通') ? '现场已疏导，伤员送医，事故移交交警处理。' :
+    '现场已调解，双方达成一致，矛盾化解。');
+  if(result===null) return;
+  c.archive = buildArchive(c, result);
+  c.status='closed'; c.closedAt=now();
+  c.timeline.push({time:now(),event:'案件办结',detail:result});
+  c.timeline.push({time:now(),event:'卷宗已生成',detail:'系统自动生成处警卷宗与复盘要点'});
+  persist(); toast('已结案，卷宗已生成'); renderOfficer();
+}
+function buildArchive(c, result){
+  const r=c.reporter, t=c.triage;
+  const lawMap = {
+    '盗窃':'《中华人民共和国治安管理处罚法》第四十九条 / 《刑法》第二百六十四条',
+    '诈骗':'《中华人民共和国刑法》第二百六十六条',
+    '斗殴伤人':'《中华人民共和国治安管理处罚法》第四十三条',
+    '故意伤害':'《中华人民共和国刑法》第二百三十四条',
+    '抢劫抢夺':'《中华人民共和国刑法》第二百六十三条 / 第二百六十七条',
+    '涉毒':'《中华人民共和国刑法》第三百四十七条',
+    '邻里纠纷':'《中华人民共和国治安管理处罚法》第九条（民间纠纷调解）',
+    '噪音扰民':'《中华人民共和国治安管理处罚法》第五十八条',
+    '交通事故':'《中华人民共和国道路交通安全法》第七十条'
+  };
+  const law = lawMap[r.conflictType] || '《中华人民共和国治安管理处罚法》相关规定';
+  const review = [];
+  if(r.weapon) review.push('本次现场存在持械风险，两车组协同接近、先喊话后控制的战术使用得当，建议继续固化。');
+  if(r.hasInjury) review.push('联动120响应及时，医疗与警力同步到场，伤员得到优先救治。');
+  if(r.peopleCount==='5+') review.push('多人聚集警情第一时间上报增派警力并全程执法记录仪取证，规范完整。');
+  if(c.timeline.length<=4) review.push('本起警情处置链条完整，从受理到结案在系统内全程留痕。');
+  if(c.triage && c.triage.category.includes('民情')) review.push('民情类警情以调解为主，处警态度耐心，未发生矛盾升级。');
+  if(review.length===0) review.push('处置流程规范，报警人反馈良好，无投诉无复议。');
+  return {
+    summary: result, result, legal: law, review: review.join(' '),
+    lessons: `接警阶段关键要素（地点、类型、伤亡、是否持械）采集完整，AI 研判定级准确。${t?t.severity+'等级':''}警情出动时长合理，${t?t.units.join('、'):''}协同顺畅。建议继续保持"先安全、后处置、全程取证"的处警原则。`
+  };
+}
+function renderArchive(){
+  const list = $('#archive-list');
+  const wrap = $('#archive-doc-wrap');
+  if(CASES.length===0){
+    list.innerHTML = `<div class="empty"><div class="big">·</div>暂无案件</div>`;
+    wrap.innerHTML='';
+    return;
+  }
+  list.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:#f4f6f7;text-align:left">
+      <th style="padding:8px;border-bottom:2px solid var(--line)">案号</th>
+      <th style="padding:8px;border-bottom:2px solid var(--line)">类型</th>
+      <th style="padding:8px;border-bottom:2px solid var(--line)">地点</th>
+      <th style="padding:8px;border-bottom:2px solid var(--line)">状态</th>
+      <th style="padding:8px;border-bottom:2px solid var(--line)">操作</th>
+    </tr></thead><tbody>
+    ${CASES.map(c=>`<tr>
+      <td style="padding:8px;border-bottom:1px solid var(--line);font-family:monospace">${c.id}</td>
+      <td style="padding:8px;border-bottom:1px solid var(--line)">${c.reporter.conflictType}</td>
+      <td style="padding:8px;border-bottom:1px solid var(--line)">${c.reporter.location}</td>
+      <td style="padding:8px;border-bottom:1px solid var(--line)">
+        <span class="tag ${c.status==='closed'?'gray':'green'}">${STATUS_LABEL[c.status]}</span>
+      </td>
+      <td style="padding:8px;border-bottom:1px solid var(--line)">
+        ${c.archive?`<button class="btn sm ghost" onclick="showArchive('${c.id}')">查看卷宗</button>`:'<span style="color:var(--muted)">未结案</span>'}
+      </td>
+    </tr>`).join('')}
+    </tbody></table>`;
+  wrap.innerHTML = window._archiveHtml || '';
+}
+function showArchive(id){
+  const c = findCase(id); if(!c||!c.archive){ toast('该案尚未结案'); return; }
+  const r=c.reporter, a=c.archive, t=c.triage;
+  const html = `
+  <div class="card">
+    <h3>处警卷宗 · ${c.id}</h3>
+    <div class="archive-doc">
+      <h2>处 警 情 况 报 告</h2>
+      <div class="sub">编号：${c.id}　　立卷时间：${c.closedAt||now()}</div>
+      <p><b>一、接警情况：</b>${c.createdAt} 接报警人 ${r.name}（电话 ${r.phone}）报警，称在 ${r.location} 发生 ${r.conflictType} 事件。简要情况：${r.desc}</p>
+      <p><b>二、AI 研判：</b>本案初判为${t?t.category:'其他'}，严重度${t?t.severity:'—'}，紧急度${t?t.urgency:'—'}；建议处警单位为${t?t.units.join('、'):'—'}。</p>
+      <p><b>三、处警经过：</b>接警后${t?t.units[0]:'值班警力'}立即出动，${c.timeline.map(x=>x.event).join('→')}。经现场工作，${a.result}</p>
+      <p><b>四、处理依据：</b>${a.legal}</p>
+      <p><b>五、处理结果：</b>本案作办结处理。${a.result}</p>
+      <div class="sign">
+        处警民警：${c.assignedOfficer||SESSION.name||'值班民警'}<br>
+        所属单位：${c.assignedUnit||'辖区派出所'}<br>
+        ${c.closedAt||now()}
+      </div>
+    </div>
+    <div class="review-box">
+      <h4>◆ 案情复盘</h4>
+      <p style="font-size:14px">${a.review}</p>
+      <h4 style="margin-top:10px">◆ 出警经验总结</h4>
+      <p style="font-size:14px">${a.lessons}</p>
+    </div>
+    <div style="margin-top:14px">
+      <button class="btn ghost sm" onclick="window.print()">打印卷宗</button>
+    </div>
+  </div>`;
+  window._archiveHtml = html;
+  renderArchive();
+  document.getElementById('archive-doc-wrap').scrollIntoView({behavior:'smooth'});
+}
+window.addEventListener('DOMContentLoaded', ()=>{ router(); });
+</script>
+</body>
+</html>
