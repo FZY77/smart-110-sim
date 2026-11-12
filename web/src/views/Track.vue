@@ -6,6 +6,13 @@
       <el-button type="primary" @click="search">查询</el-button>
     </div>
 
+    <transition name="slide-down">
+      <div v-if="hasUpdate" class="update-banner" @click="hasUpdate = false">
+        <el-tag type="success" size="small">● 新动态</el-tag>
+        <span style="margin-left:8px">警员刚更新了处置进展，点击关闭</span>
+      </div>
+    </transition>
+
     <div v-if="case" class="content">
       <div class="case-bar">
         <div>
@@ -30,9 +37,10 @@
       </el-card>
 
       <el-card class="block">
-        <template #header>处置进度</template>
+        <template #header>处置进度（实时同步）</template>
         <el-timeline>
-          <el-timeline-item v-for="(it, i) in case.timeline" :key="i" :timestamp="it.time" placement="top">
+          <el-timeline-item v-for="(it, i) in case.timeline" :key="i" :timestamp="it.time" placement="top"
+            :type="i === case.timeline.length - 1 && case.status !== 'closed' ? 'primary' : ''">
             <b>{{ it.event }}</b>
             <div class="detail">{{ it.detail }}</div>
           </el-timeline-item>
@@ -46,8 +54,25 @@
         </ul>
       </el-card>
 
-      <el-alert v-if="case.status === 'closed'" type="success" :closable="false" style="margin-top:16px"
+      <el-alert v-if="case.status === 'closed' && !case.feedback" type="success" :closable="false" style="margin-top:16px"
         :title="'本起警情已办结：' + (case.archive?.summary || '')" />
+
+      <!-- 结案后反馈卡片 -->
+      <el-card v-if="case.status === 'closed' && !case.feedback" class="block feedback-card">
+        <template #header>对本次出警服务进行评价</template>
+        <div class="rating-row">
+          <span v-for="n in 5" :key="n" class="star" :class="{on: n <= rating}" @click="rating = n">★</span>
+          <span class="rating-text">{{ ratingText }}</span>
+        </div>
+        <el-input v-model="comment" type="textarea" :rows="3" placeholder="还有什么想对民警说的？（选填）" style="margin-top:12px" />
+        <el-button type="primary" style="margin-top:12px" @click="submitFeedback" :loading="submitting">提交反馈</el-button>
+      </el-card>
+
+      <el-result v-if="case.feedback" icon="success" title="感谢您的反馈！" :sub-title="'您给了 ' + case.feedback.rating + ' 星评价'" style="margin-top:16px">
+        <template #extra>
+          <el-button @click="goHome">返回首页</el-button>
+        </template>
+      </el-result>
     </div>
 
     <div v-else class="empty">
@@ -57,14 +82,20 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute(), router = useRouter()
 const caseIdInput = ref(route.query.id || '')
 const case = ref(null)
+const hasUpdate = ref(false)
+const rating = ref(5)
+const comment = ref('')
+const submitting = ref(false)
 let timer = null
+let lastTimelineLen = 0
 
 const STATUS = {
   pending: '已受理', dispatched: '已派警', enroute: '出警途中',
@@ -77,6 +108,8 @@ const statusType = computed(() => {
   if (s === 'pending') return 'warning'
   return 'success'
 })
+const ratingText = computed(() => ['', '非常不满意', '不满意', '一般', '满意', '非常满意'][rating.value])
+
 const copPos = computed(() => {
   const m = { pending: [20, 70], dispatched: [35, 60], enroute: [55, 48], onscene: [78, 65], handling: [78, 65], closed: [78, 65] }
   const [x, y] = m[case.value?.status] || [20, 70]
@@ -100,23 +133,49 @@ async function load() {
   if (!caseIdInput.value) return
   try {
     const { data } = await axios.get('/api/case/' + caseIdInput.value)
+    // 检测时间线是否有新增
+    if (case.value && data.timeline.length > lastTimelineLen) {
+      hasUpdate.value = true
+    }
+    lastTimelineLen = data.timeline.length
     case.value = data
   } catch (e) {
-    case.value = null
+    if (!case.value) case.value = null
   }
 }
 
+async function submitFeedback() {
+  submitting.value = true
+  try {
+    const { data } = await axios.post(`/api/case/${caseIdInput.value}/feedback`, {
+      rating: rating.value,
+      comment: comment.value.trim()
+    })
+    case.value = data
+    ElMessage.success('感谢您的反馈！')
+  } catch (e) {
+    ElMessage.error('提交失败，请重试')
+  } finally {
+    submitting.value = false
+  }
+}
+
+function goHome() { router.push('/') }
+
 onMounted(() => {
   if (caseIdInput.value) load()
-  timer = setInterval(load, 3000)
+  timer = setInterval(load, 2000)
 })
 onUnmounted(() => clearInterval(timer))
 </script>
 
 <style scoped>
 .track { max-width: 800px; margin: 0 auto; padding: 20px; }
-.header { display: flex; align-items: center; margin-bottom: 20px; }
+.header { display: flex; align-items: center; margin-bottom: 16px; }
 .header h2 { margin: 0 20px 0 0; }
+.update-banner { background: #f0f9eb; border: 1px solid #c2e7b0; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; cursor: pointer; font-size: 13px; color: #529b2e; display: flex; align-items: center; }
+.slide-down-enter-active, .slide-down-leave-active { transition: all .3s; }
+.slide-down-enter-from, .slide-down-leave-to { opacity: 0; transform: translateY(-10px); }
 .case-bar { background: linear-gradient(135deg, #0d2b52, #1d5aa8); color: #fff; padding: 16px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .case-bar .lbl { font-size: 12px; opacity: .8; }
 .case-bar .no { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
@@ -132,4 +191,9 @@ onUnmounted(() => clearInterval(timer))
 .detail { font-size: 13px; color: #666; margin-top: 2px; }
 .advice { padding-left: 20px; line-height: 2; }
 .empty { padding: 60px 0; }
+.feedback-card { border: 2px solid #f0f9eb; }
+.rating-row { display: flex; align-items: center; gap: 4px; }
+.star { font-size: 32px; color: #dcdfe6; cursor: pointer; transition: .15s; }
+.star.on { color: #f7ba2a; }
+.rating-text { margin-left: 10px; font-size: 14px; color: #666; }
 </style>
