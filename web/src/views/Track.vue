@@ -13,15 +13,15 @@
       </div>
     </transition>
 
-    <div v-if="case" class="content">
+    <div v-if="cur" class="content">
       <div class="case-bar">
         <div>
           <div class="lbl">案件编号</div>
-          <div class="no">{{ case.id }}</div>
+          <div class="no">{{ cur.id }}</div>
         </div>
         <div class="right">
           <el-tag :type="statusType">{{ statusLabel }}</el-tag>
-          <div v-if="case.triage" class="cat">{{ case.triage.category }} · {{ case.triage.severity }}</div>
+          <div v-if="cur.triage" class="cat">{{ cur.triage.category }} · {{ cur.triage.severity }}</div>
         </div>
       </div>
 
@@ -39,26 +39,26 @@
       <el-card class="block">
         <template #header>处置进度（实时同步）</template>
         <el-timeline>
-          <el-timeline-item v-for="(it, i) in case.timeline" :key="i" :timestamp="it.time" placement="top"
-            :type="i === case.timeline.length - 1 && case.status !== 'closed' ? 'primary' : ''">
+          <el-timeline-item v-for="(it, i) in cur.timeline" :key="i" :timestamp="it.time" placement="top"
+            :type="i === cur.timeline.length - 1 && cur.status !== 'closed' ? 'primary' : ''">
             <b>{{ it.event }}</b>
             <div class="detail">{{ it.detail }}</div>
           </el-timeline-item>
         </el-timeline>
       </el-card>
 
-      <el-card v-if="case.triage" class="block">
+      <el-card v-if="cur.triage" class="block">
         <template #header>AI 安全指引（给您）</template>
         <ul class="advice">
-          <li v-for="(a, i) in case.triage.adviceToReporter" :key="i">{{ a }}</li>
+          <li v-for="(a, i) in cur.triage.adviceToReporter" :key="i">{{ a }}</li>
         </ul>
       </el-card>
 
-      <el-alert v-if="case.status === 'closed' && !case.feedback" type="success" :closable="false" style="margin-top:16px"
-        :title="'本起警情已办结：' + (case.archive?.summary || '')" />
+      <el-alert v-if="cur.status === 'closed' && !cur.feedback" type="success" :closable="false" style="margin-top:16px"
+        :title="'本起警情已办结：' + (cur.archive?.summary || '')" />
 
       <!-- 结案后反馈卡片 -->
-      <el-card v-if="case.status === 'closed' && !case.feedback" class="block feedback-card">
+      <el-card v-if="cur.status === 'closed' && !cur.feedback" class="block feedback-card">
         <template #header>对本次出警服务进行评价</template>
         <div class="rating-row">
           <span v-for="n in 5" :key="n" class="star" :class="{on: n <= rating}" @click="rating = n">★</span>
@@ -68,7 +68,7 @@
         <el-button type="primary" style="margin-top:12px" @click="submitFeedback" :loading="submitting">提交反馈</el-button>
       </el-card>
 
-      <el-result v-if="case.feedback" icon="success" title="感谢您的反馈！" :sub-title="'您给了 ' + case.feedback.rating + ' 星评价'" style="margin-top:16px">
+      <el-result v-if="cur.feedback" icon="success" title="感谢您的反馈！" :sub-title="'您给了 ' + cur.feedback.rating + ' 星评价'" style="margin-top:16px">
         <template #extra>
           <el-button @click="goHome">返回首页</el-button>
         </template>
@@ -82,14 +82,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute(), router = useRouter()
 const caseIdInput = ref(route.query.id || '')
-const case = ref(null)
+const cur = ref(null)
 const hasUpdate = ref(false)
 const rating = ref(5)
 const comment = ref('')
@@ -101,9 +101,9 @@ const STATUS = {
   pending: '已受理', dispatched: '已派警', enroute: '出警途中',
   onscene: '已到达现场', handling: '现场处置中', closed: '已结案'
 }
-const statusLabel = computed(() => STATUS[case.value?.status] || '—')
+const statusLabel = computed(() => STATUS[cur.value?.status] || '—')
 const statusType = computed(() => {
-  const s = case.value?.status
+  const s = cur.value?.status
   if (s === 'closed') return 'info'
   if (s === 'pending') return 'warning'
   return 'success'
@@ -112,11 +112,11 @@ const ratingText = computed(() => ['', '非常不满意', '不满意', '一般',
 
 const copPos = computed(() => {
   const m = { pending: [20, 70], dispatched: [35, 60], enroute: [55, 48], onscene: [78, 65], handling: [78, 65], closed: [78, 65] }
-  const [x, y] = m[case.value?.status] || [20, 70]
+  const [x, y] = m[cur.value?.status] || [20, 70]
   return { x, y }
 })
 const eta = computed(() => {
-  const s = case.value?.status
+  const s = cur.value?.status
   if (s === 'pending') return '--'
   if (s === 'dispatched') return '约 8 分钟'
   if (s === 'enroute') return '约 4 分钟'
@@ -133,14 +133,13 @@ async function load() {
   if (!caseIdInput.value) return
   try {
     const { data } = await axios.get('/api/case/' + caseIdInput.value)
-    // 检测时间线是否有新增
-    if (case.value && data.timeline.length > lastTimelineLen) {
+    if (cur.value && data.timeline.length > lastTimelineLen) {
       hasUpdate.value = true
     }
     lastTimelineLen = data.timeline.length
-    case.value = data
+    cur.value = data
   } catch (e) {
-    if (!case.value) case.value = null
+    if (!cur.value) cur.value = null
   }
 }
 
@@ -151,7 +150,7 @@ async function submitFeedback() {
       rating: rating.value,
       comment: comment.value.trim()
     })
-    case.value = data
+    cur.value = data
     ElMessage.success('感谢您的反馈！')
   } catch (e) {
     ElMessage.error('提交失败，请重试')
