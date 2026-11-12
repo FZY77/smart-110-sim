@@ -158,8 +158,8 @@ router.post('/', (req, res) => {
     createdAt: new Date().toISOString(),
     closedAt: null,
     archive: null,
+    feedback: null,
   }
-  // 自动 AI 研判
   c.triage = aiTriage(reporter)
   c.timeline.push({ time: now(), event: 'AI 完成初步研判', detail: `${c.triage.category} · ${c.triage.severity} · ${c.triage.urgency}` })
   cases.unshift(c)
@@ -225,6 +225,20 @@ router.patch('/:id/close', (req, res) => {
   c.closedAt = new Date().toISOString()
   c.timeline.push({ time: now(), event: '案件办结', detail: result })
   c.timeline.push({ time: now(), event: '卷宗已生成', detail: '系统自动生成处警卷宗与复盘要点' })
+  res.json(c)
+})
+
+// POST /api/case/:id/feedback  报警人结案后反馈
+router.post('/:id/feedback', (req, res) => {
+  const c = cases.find(x => x.id === req.params.id)
+  if (!c) return res.status(404).json({ error: 'not found' })
+  if (c.status !== 'closed') return res.status(400).json({ error: '案件尚未结案，暂不能反馈' })
+  c.feedback = {
+    rating: req.body.rating || 5,
+    comment: req.body.comment || '',
+    at: new Date().toISOString()
+  }
+  c.timeline.push({ time: now(), event: '报警人反馈', detail: `满意度 ${req.body.rating} 星${req.body.comment ? '：' + req.body.comment : ''}` })
   res.json(c)
 })
 
