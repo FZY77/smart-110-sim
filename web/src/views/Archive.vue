@@ -16,6 +16,12 @@
             <el-tag :type="row.status === 'closed' ? 'info' : 'success'">{{ statusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="报警人评价" width="120">
+          <template #default="{ row }">
+            <span v-if="row.feedback" style="color:#f7ba2a">★ {{ row.feedback.rating }} 星</span>
+            <span v-else style="color:#999">—</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="120">
           <template #default="{ row }">
             <el-button v-if="row.archive" size="small" @click.stop="showDoc(row)">查看卷宗</el-button>
@@ -40,6 +46,17 @@
           {{ doc.closedAt?.slice(0,19) }}
         </div>
       </div>
+
+      <el-card v-if="doc.feedback" class="feedback-box">
+        <h4>◆ 报警人反馈</h4>
+        <div class="stars">
+          <span v-for="n in 5" :key="n" :class="{on: n <= doc.feedback.rating}">★</span>
+          <b style="margin-left:8px">{{ doc.feedback.rating }} 星</b>
+        </div>
+        <p v-if="doc.feedback.comment" style="margin-top:8px;color:#555">“{{ doc.feedback.comment }}”</p>
+        <div class="fb-time">{{ doc.feedback.at?.slice(0,19) }}</div>
+      </el-card>
+
       <el-card class="review">
         <h4>◆ 案情复盘</h4>
         <p>{{ doc.archive.review }}</p>
@@ -82,4 +99,9 @@ onMounted(load)
 .doc .sign { text-align: right; margin-top: 24px; font-family: "Microsoft YaHei", sans-serif; font-size: 14px; text-indent: 0; }
 .review { background: #f4f9f4; border-left: 4px solid #1e8449; margin-top: 12px; }
 .review h4 { color: #1e8449; margin: 0 0 6px; }
+.feedback-box { background: #fffbe6; border-left: 4px solid #f7ba2a; margin-top: 12px; }
+.feedback-box h4 { color: #d48806; margin: 0 0 8px; }
+.stars { font-size: 20px; color: #dcdfe6; }
+.stars .on { color: #f7ba2a; }
+.fb-time { font-size: 12px; color: #999; margin-top: 6px; }
 </style>
